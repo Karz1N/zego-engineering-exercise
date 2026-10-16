@@ -10,9 +10,27 @@ public static class CliApplication
 
     public static async Task<int> RunAsync(string[] args, TextWriter output, TextWriter error, CancellationToken token = default)
     {
+        try
+        {
+            return await RunCoreAsync(args, output, error, token);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            await TryWriteErrorAsync(error, "Crawl cancelled; output is partial.");
+            return 130;
+        }
+        catch (IOException)
+        {
+            await TryWriteErrorAsync(error, "Output could not be written; crawl stopped.");
+            return 1;
+        }
+    }
+
+    private static async Task<int> RunCoreAsync(string[] args, TextWriter output, TextWriter error, CancellationToken token)
+    {
         if (args is ["--help"] or ["-h"])
         {
-            await output.WriteLineAsync(Usage);
+            await output.WriteLineAsync(Usage.AsMemory(), token);
             return 0;
         }
 
@@ -23,44 +41,44 @@ public static class CliApplication
         }
         catch (ArgumentException exception)
         {
-            await error.WriteLineAsync(exception.Message);
-            await error.WriteLineAsync(Usage);
+            await error.WriteLineAsync(exception.Message.AsMemory(), token);
+            await error.WriteLineAsync(Usage.AsMemory(), token);
             return 2;
         }
 
-        try
+        using var fetcher = new HttpPageFetcher(command.Options);
+        var crawler = new WebCrawler(fetcher, command.Options);
+        CrawlSummary summary = await crawler.RunAsync(command.StartUrl, async (page, cancellationToken) =>
         {
-            using var fetcher = new HttpPageFetcher(command.Options);
-            var crawler = new WebCrawler(fetcher, command.Options);
-            CrawlSummary summary = await crawler.RunAsync(command.StartUrl, async (page, cancellationToken) =>
+            cancellationToken.ThrowIfCancellationRequested();
+            await output.WriteLineAsync($"PAGE {page.Url.AbsoluteUri}".AsMemory(), cancellationToken);
+            await output.WriteLineAsync($"  STATUS {page.Outcome}{(page.StatusCode is { } status ? $" ({(int)status})" : string.Empty)}".AsMemory(), cancellationToken);
+            foreach (Uri link in page.Links)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await output.WriteLineAsync($"PAGE {page.Url.AbsoluteUri}");
-                await output.WriteLineAsync($"  STATUS {page.Outcome}{(page.StatusCode is { } status ? $" ({(int)status})" : string.Empty)}");
-                foreach (Uri link in page.Links)
-                {
-                    await output.WriteLineAsync($"  LINK {link.AbsoluteUri}");
-                }
+                await output.WriteLineAsync($"  LINK {link.AbsoluteUri}".AsMemory(), cancellationToken);
+            }
 
-                await output.WriteLineAsync();
-                if (page.Error is not null)
-                {
-                    await error.WriteLineAsync($"{page.Url.AbsoluteUri}: {page.Error}");
-                }
-            }, token);
+            await output.WriteLineAsync(ReadOnlyMemory<char>.Empty, cancellationToken);
+            if (page.Error is not null)
+            {
+                await error.WriteLineAsync($"{page.Url.AbsoluteUri}: {page.Error}".AsMemory(), cancellationToken);
+            }
+        }, token);
 
-            await error.WriteLineAsync($"SUMMARY scheduled={summary.ScheduledPages} html={summary.SuccessfulPages} redirects={summary.RedirectedPages} skipped={summary.SkippedPages} failed={summary.FailedPages} pageLimitReached={summary.PageLimitReached}");
-            return summary.IsComplete ? 0 : 1;
-        }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        await error.WriteLineAsync($"SUMMARY scheduled={summary.ScheduledPages} html={summary.SuccessfulPages} redirects={summary.RedirectedPages} skipped={summary.SkippedPages} failed={summary.FailedPages} pageLimitReached={summary.PageLimitReached}".AsMemory(), token);
+        return summary.IsComplete ? 0 : 1;
+    }
+
+    private static async Task TryWriteErrorAsync(TextWriter error, string message)
+    {
+        try
         {
-            await error.WriteLineAsync("Crawl cancelled; output is partial.");
-            return 130;
+            await error.WriteLineAsync(message);
         }
         catch (IOException)
         {
-            await error.WriteLineAsync("Output could not be written; crawl stopped.");
-            return 1;
+            // The diagnostic channel may itself be closed; preserve the intended exit code.
         }
     }
 }

@@ -1,73 +1,95 @@
 {
   "Runtime": ".NET 10.0.13",
   "OperatingSystem": "Microsoft Windows 10.0.26200",
+  "Workload": "simulated-latency",
   "Pages": 41,
   "SimulatedDelayMilliseconds": 25,
   "Repetitions": 5,
-  "SequentialMedianMilliseconds": 1217.9942,
-  "ConcurrentMedianMilliseconds": 305.1677,
-  "Speedup": 3.991229084860554,
+  "SequentialMedianMilliseconds": 1242.8383,
+  "ConcurrentMedianMilliseconds": 310.9575,
+  "Speedup": 3.9968108181986284,
+  "ProcessPeakWorkingSetBytes": 83226624,
   "Trials": [
     {
       "Concurrency": 1,
-      "ElapsedMilliseconds": 1217.7734,
+      "ElapsedMilliseconds": 1244.0331,
       "PeakServerRequests": 1,
-      "Pages": 41
+      "Pages": 41,
+      "ProcessCpuMilliseconds": 453.125,
+      "ProcessAllocatedBytes": 1840968
     },
     {
       "Concurrency": 4,
-      "ElapsedMilliseconds": 305.9101,
+      "ElapsedMilliseconds": 311.2592,
       "PeakServerRequests": 4,
-      "Pages": 41
+      "Pages": 41,
+      "ProcessCpuMilliseconds": 93.75,
+      "ProcessAllocatedBytes": 2003808
     },
     {
       "Concurrency": 4,
-      "ElapsedMilliseconds": 303.7486,
+      "ElapsedMilliseconds": 308.9202,
       "PeakServerRequests": 4,
-      "Pages": 41
+      "Pages": 41,
+      "ProcessCpuMilliseconds": 109.375,
+      "ProcessAllocatedBytes": 2039112
     },
     {
       "Concurrency": 1,
-      "ElapsedMilliseconds": 1215.1702,
+      "ElapsedMilliseconds": 1243.7344,
       "PeakServerRequests": 1,
-      "Pages": 41
+      "Pages": 41,
+      "ProcessCpuMilliseconds": 593.75,
+      "ProcessAllocatedBytes": 1741352
     },
     {
       "Concurrency": 1,
-      "ElapsedMilliseconds": 1219.6745,
+      "ElapsedMilliseconds": 1242.8383,
       "PeakServerRequests": 1,
-      "Pages": 41
+      "Pages": 41,
+      "ProcessCpuMilliseconds": 15.625,
+      "ProcessAllocatedBytes": 1740032
     },
     {
       "Concurrency": 4,
-      "ElapsedMilliseconds": 306.0573,
+      "ElapsedMilliseconds": 310.9575,
       "PeakServerRequests": 4,
-      "Pages": 41
+      "Pages": 41,
+      "ProcessCpuMilliseconds": 0,
+      "ProcessAllocatedBytes": 1900152
     },
     {
       "Concurrency": 4,
-      "ElapsedMilliseconds": 305.1677,
+      "ElapsedMilliseconds": 311.3114,
       "PeakServerRequests": 4,
-      "Pages": 41
+      "Pages": 41,
+      "ProcessCpuMilliseconds": 93.75,
+      "ProcessAllocatedBytes": 1875184
     },
     {
       "Concurrency": 1,
-      "ElapsedMilliseconds": 1218.6525,
+      "ElapsedMilliseconds": 1242.0645,
       "PeakServerRequests": 1,
-      "Pages": 41
+      "Pages": 41,
+      "ProcessCpuMilliseconds": 46.875,
+      "ProcessAllocatedBytes": 1738952
     },
     {
       "Concurrency": 1,
-      "ElapsedMilliseconds": 1217.9942,
+      "ElapsedMilliseconds": 1241.1839,
       "PeakServerRequests": 1,
-      "Pages": 41
+      "Pages": 41,
+      "ProcessCpuMilliseconds": 187.5,
+      "ProcessAllocatedBytes": 1739344
     },
     {
       "Concurrency": 4,
-      "ElapsedMilliseconds": 304.5426,
+      "ElapsedMilliseconds": 308.6787,
       "PeakServerRequests": 4,
-      "Pages": 41
+      "Pages": 41,
+      "ProcessCpuMilliseconds": 31.25,
+      "ProcessAllocatedBytes": 1926592
     }
   ],
-  "Scope": "Local synthetic I/O workload; not a real-site benchmark or a peak-memory measurement."
+  "Scope": "Synthetic loopback workload. CPU, allocation and peak working set include both crawler and fixture server, runtime and warm-up; not isolated crawler memory or real-site performance."
 }

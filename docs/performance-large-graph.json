@@ -1,0 +1,63 @@
+{
+  "Runtime": ".NET 10.0.13",
+  "OperatingSystem": "Microsoft Windows 10.0.26200",
+  "Workload": "large-graph",
+  "Pages": 10000,
+  "SimulatedDelayMilliseconds": 0,
+  "Repetitions": 3,
+  "SequentialMedianMilliseconds": 1011.614,
+  "ConcurrentMedianMilliseconds": 382.0081,
+  "Speedup": 2.648148036651579,
+  "ProcessPeakWorkingSetBytes": 125198336,
+  "Trials": [
+    {
+      "Concurrency": 1,
+      "ElapsedMilliseconds": 1543.9135,
+      "PeakServerRequests": 1,
+      "Pages": 10000,
+      "ProcessCpuMilliseconds": 3203.125,
+      "ProcessAllocatedBytes": 415862008
+    },
+    {
+      "Concurrency": 4,
+      "ElapsedMilliseconds": 392.1751,
+      "PeakServerRequests": 4,
+      "Pages": 10000,
+      "ProcessCpuMilliseconds": 1500,
+      "ProcessAllocatedBytes": 419379960
+    },
+    {
+      "Concurrency": 4,
+      "ElapsedMilliseconds": 364.3096,
+      "PeakServerRequests": 4,
+      "Pages": 10000,
+      "ProcessCpuMilliseconds": 1406.25,
+      "ProcessAllocatedBytes": 418265296
+    },
+    {
+      "Concurrency": 1,
+      "ElapsedMilliseconds": 999.7955,
+      "PeakServerRequests": 1,
+      "Pages": 10000,
+      "ProcessCpuMilliseconds": 1500,
+      "ProcessAllocatedBytes": 413864112
+    },
+    {
+      "Concurrency": 1,
+      "ElapsedMilliseconds": 1011.614,
+      "PeakServerRequests": 1,
+      "Pages": 10000,
+      "ProcessCpuMilliseconds": 1859.375,
+      "ProcessAllocatedBytes": 413893384
+    },
+    {
+      "Concurrency": 4,
+      "ElapsedMilliseconds": 382.0081,
+      "PeakServerRequests": 4,
+      "Pages": 10000,
+      "ProcessCpuMilliseconds": 1343.75,
+      "ProcessAllocatedBytes": 418846152
+    }
+  ],
+  "Scope": "Synthetic loopback workload. CPU, allocation and peak working set include both crawler and fixture server, runtime and warm-up; not isolated crawler memory or real-site performance."
+}

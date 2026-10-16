@@ -10,9 +10,15 @@ using Zego.Crawler.Benchmarks.Measurements;
 using Zego.Crawler.Crawling;
 using Zego.Crawler.Http;
 
-const int childPages = 40;
-const int delayMilliseconds = 25;
-const int repetitions = 5;
+bool largeGraph = args is ["--large-graph"];
+if (args.Length != 0 && !largeGraph)
+{
+    throw new ArgumentException("Usage: benchmark [--large-graph]");
+}
+int childPages = largeGraph ? 9_999 : 40;
+int delayMilliseconds = largeGraph ? 0 : 25;
+int repetitions = largeGraph ? 3 : 5;
+using Process process = Process.GetCurrentProcess();
 var requests = new ConcurrentDictionary<string, int>(StringComparer.Ordinal);
 int active = 0, peak = 0;
 string rootHtml = string.Concat(Enumerable.Range(0, childPages).Select(index => $"<a href='/page/{index}'>page</a>"));
@@ -72,14 +78,16 @@ try
     {
         Runtime = RuntimeInformation.FrameworkDescription,
         OperatingSystem = RuntimeInformation.OSDescription,
+        Workload = largeGraph ? "large-graph" : "simulated-latency",
         Pages = childPages + 1,
         SimulatedDelayMilliseconds = delayMilliseconds,
         Repetitions = repetitions,
         SequentialMedianMilliseconds = sequentialMedian,
         ConcurrentMedianMilliseconds = concurrentMedian,
         Speedup = sequentialMedian / concurrentMedian,
+        ProcessPeakWorkingSetBytes = process.PeakWorkingSet64,
         Trials = trials,
-        Scope = "Local synthetic I/O workload; not a real-site benchmark or a peak-memory measurement."
+        Scope = "Synthetic loopback workload. CPU, allocation and peak working set include both crawler and fixture server, runtime and warm-up; not isolated crawler memory or real-site performance."
     }, new JsonSerializerOptions { WriteIndented = true }));
 }
 finally
@@ -94,9 +102,13 @@ async Task<Trial> MeasureAsync(int concurrency)
     var options = new CrawlOptions { MaxConcurrency = concurrency };
     using var fetcher = new HttpPageFetcher(options);
     var crawler = new WebCrawler(fetcher, options);
+    long allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
+    TimeSpan cpuBefore = process.TotalProcessorTime;
     var stopwatch = Stopwatch.StartNew();
     CrawlSummary summary = await crawler.RunAsync(startUrl, (_, _) => ValueTask.CompletedTask, deadline.Token);
     stopwatch.Stop();
+    double cpuMilliseconds = (process.TotalProcessorTime - cpuBefore).TotalMilliseconds;
+    long allocatedBytes = GC.GetTotalAllocatedBytes(precise: true) - allocatedBefore;
 
     if (!summary.IsComplete || summary.SuccessfulPages != childPages + 1
         || requests.Count != childPages + 1 || requests.Values.Any(count => count != 1)
@@ -105,7 +117,7 @@ async Task<Trial> MeasureAsync(int concurrency)
         throw new InvalidOperationException("Benchmark failed correctness or concurrency checks.");
     }
 
-    return new Trial(concurrency, stopwatch.Elapsed.TotalMilliseconds, peak, summary.SuccessfulPages);
+    return new Trial(concurrency, stopwatch.Elapsed.TotalMilliseconds, peak, summary.SuccessfulPages, cpuMilliseconds, allocatedBytes);
 }
 
 static double Median(IEnumerable<double> values)

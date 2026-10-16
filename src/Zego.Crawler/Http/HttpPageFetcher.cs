@@ -68,10 +68,9 @@ public sealed class HttpPageFetcher : IPageFetcher, IDisposable
             }
 
             using MemoryStream body = await ReadBoundedAsync(response.Content, token);
-            Encoding encoding = GetEncoding(response.Content.Headers.ContentType?.CharSet);
-            using var reader = new StreamReader(body, encoding, detectEncodingFromByteOrderMarks: true);
-            string html = await reader.ReadToEndAsync(token);
-            IReadOnlyList<Uri> links = await extractor.ExtractAsync(html, url, token);
+            Encoding? encoding = GetBomEncoding(body.GetBuffer().AsSpan(0, (int)body.Length))
+                ?? GetEncoding(response.Content.Headers.ContentType?.CharSet);
+            IReadOnlyList<Uri> links = await extractor.ExtractAsync(body, url, encoding, token);
             return new PageResult(url, PageOutcome.Success, links, response.StatusCode);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -135,11 +134,24 @@ public sealed class HttpPageFetcher : IPageFetcher, IDisposable
         }
     }
 
-    private static Encoding GetEncoding(string? charset)
+    private static Encoding? GetBomEncoding(ReadOnlySpan<byte> bytes) => bytes switch
+    {
+        [0xEF, 0xBB, 0xBF, ..] => Encoding.UTF8,
+        [0xFF, 0xFE, 0x00, 0x00, ..] => Encoding.UTF32,
+        [0x00, 0x00, 0xFE, 0xFF, ..] => new UTF32Encoding(bigEndian: true, byteOrderMark: true),
+        [0xFF, 0xFE, ..] => Encoding.Unicode,
+        [0xFE, 0xFF, ..] => Encoding.BigEndianUnicode,
+        _ => null
+    };
+
+    private static Encoding? GetEncoding(string? charset)
     {
         try
         {
-            return string.IsNullOrWhiteSpace(charset) ? Encoding.UTF8 : Encoding.GetEncoding(charset.Trim('"', '\''));
+            if (string.IsNullOrWhiteSpace(charset)) return null;
+            string name = charset.Trim('"', '\'');
+            // Resolve legacy charsets explicitly; do not depend on a parser's global provider registration.
+            return CodePagesEncodingProvider.Instance.GetEncoding(name) ?? Encoding.GetEncoding(name);
         }
         catch (ArgumentException exception)
         {

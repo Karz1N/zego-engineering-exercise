@@ -61,7 +61,7 @@ The brief leaves some URL semantics unspecified. This implementation makes them 
 - **Relative hyperlinks resolve against the page URL**, using the first `base[href]` if it resolves to an allowed HTTP(S) URL. An unsupported first base falls back to the page URL; later base elements do not override it. An external base affects link resolution, never crawl scope.
 - **Redirects are graph edges.** Automatic HTTP redirects are disabled. The coordinator schedules a valid destination only if in scope and not already scheduled. This avoids fetching a redirect destination twice when another page links directly to it and terminates cycles without a separate redirect-depth counter. Redirects outside scope are printed but not followed. A missing/invalid HTTP(S) location is a page failure.
 - **HTML is server-rendered content only.** No scripts execute and no assets are loaded by the parser. HTML and XHTML MIME types are accepted; missing/other content types are skipped. Non-success HTTP responses are failures and their bodies are not crawled.
-- **Decoding uses HTTP charset**, with BOM detection; UTF-8 is the fallback. Unsupported encodings are reported. HTML-only `meta charset` declarations are not used to override the decoding choice; this is a known limitation for legacy pages without a correct HTTP charset.
+- **Decoding honours BOM, then HTTP charset, then HTML encoding declarations.** Bytes reach the HTML parser directly, allowing `meta charset` and `http-equiv` detection within its 1024-byte prelude when no authoritative encoding was supplied. UTF-8 is the fallback. Legacy code pages such as Windows-1252 are resolved explicitly; unsupported HTTP charset declarations without a recognised BOM are reported as failures.
 - **No silent truncation:** oversized bodies fail visibly; omitted eligible URLs set a summary flag and exit code 1. Existing work continues after individual page failures. Pages are not retried by the crawler.
 
 ## Architecture
@@ -135,7 +135,7 @@ The trade-off is less structural enforcement in exchange for a smaller solution 
 For P scheduled pages, concurrency C, body cap B and L hyperlinks on a page:
 
 - The pending queue and scheduled set hold at most P entries; active fetch tasks are bounded by C. P itself is bounded by `--max-pages`.
-- A response retains its byte buffer, decoded text, DOM and links during processing. Memory scales with C and B, plus URL lengths and parsing overhead; B is **not** a total-memory cap. Completed results can temporarily be retained by the bounded active task set.
+- A response retains its bounded byte buffer, DOM and links during processing. The parser's streaming source uses a bounded decoded-character window, avoiding a separate whole-page HTML string; this does **not** make the DOM constant-memory. Memory scales with C and B, plus URL lengths and parsing overhead; B is **not** a total-memory cap. Completed results can temporarily be retained by the bounded active task set.
 - Expected hash-based identity lookups are constant time. Link deduplication/sorting costs approximately O(L log L). Parsing is proportional to bounded HTML input, while DOM structure and allocations affect actual cost.
 - `Task.WhenAny` bookkeeping scales with C. This is appropriate for modest configurable concurrency, not a claim that millions of parallel fetches would be efficient.
 
@@ -148,25 +148,26 @@ dotnet test Zego.Crawler.sln --configuration Release --no-build --no-restore
 dotnet format Zego.Crawler.sln --verify-no-changes --no-restore
 ```
 
-Tests cover exact-host scope and IDN identity, relative/base links, fragments and query variants, cycles, simultaneous discovery, bounded concurrency, completion while work is in flight, page limits, partial failures, cancellation and output failures. Integration tests use real HTTP on OS-assigned loopback ports, including external redirects, redirect cycles, missing locations, broken connections, MIME filtering, declared encodings, timeouts during body reading and oversized streamed/compressed responses. Unit concurrency tests use explicit gates rather than sleep-based ordering. External sites are not test dependencies.
+The 70 tests cover exact-host scope and IDN identity, relative/base links, fragments and query variants, cycles, simultaneous discovery, bounded concurrency, completion while work is in flight, page limits, partial failures, cancellation and output failures. Integration tests use real HTTP on OS-assigned loopback ports, including external redirects, redirect cycles, missing locations, broken connections, MIME filtering, BOM/HTTP/meta encoding precedence, Windows-1252, timeouts during body reading and oversized streamed/compressed responses. Output tests include closed stdout/stderr and cancellation between links. Unit concurrency tests use explicit gates rather than sleep-based ordering. External sites are not test dependencies.
 
-Package versions and transitive dependencies are recorded in committed `packages.lock.json` files. Nullable analysis, SDK analyzers and warnings as errors are enabled. CI performs locked restore, Release build, tests and formatting checks on Windows and Linux. CI is configured but has not run on GitHub; local validation is recorded in [validation.md](docs/validation.md).
+Package versions and transitive dependencies are recorded in committed `packages.lock.json` files. Nullable analysis, SDK analyzers and warnings as errors are enabled. [CI](https://github.com/Karz1N/zego-engineering-exercise/actions) performs locked restore, Release build, tests and formatting checks on Windows and Linux. Verified commits and local checks are recorded in [validation.md](docs/validation.md).
 
 ## Performance measurement
 
 ```sh
 dotnet run --project tools/Zego.Crawler.Benchmarks --configuration Release --no-build
+dotnet run --project tools/Zego.Crawler.Benchmarks --configuration Release --no-build -- --large-graph
 ```
 
-The harness serves 41 pages locally, with 25 ms of deliberate latency on each of 40 child pages and links back to the root. It warms up each configuration, then alternates five measured crawls at concurrency 1 and 4. Every trial checks the page count, absence of failures, one request per URL and the concurrency limit. It reports elapsed time, median and peak server requests as JSON. Each crawl has a fresh client, like a separate CLI invocation.
+The default harness serves 41 pages locally, with 25 ms of deliberate latency on each of 40 child pages and links back to the root. It warms up each configuration, then alternates five measured crawls at concurrency 1 and 4. `--large-graph` instead processes 10,000 URLs without artificial latency, using three measured crawls per configuration. Every trial checks the page count, absence of failures, one request per URL and the concurrency limit. Each crawl has a fresh client, like a separate CLI invocation.
 
-Measured results and their interpretation are in [performance.md](docs/performance.md), with raw trials in [performance-results.json](docs/performance-results.json). This demonstrates behaviour under a controlled I/O workload. It does not establish performance on arbitrary websites or a peak-memory bound; server throttling, response size, parsing cost and stdout speed can change the result.
+Measured results and their interpretation are in [performance.md](docs/performance.md), with raw [latency](docs/performance-results.json) and [large-graph](docs/performance-large-graph.json) trials. The reports include elapsed time, CPU time, allocated bytes and the process peak working set. Resource measurements include the crawler, fixture server, runtime and warm-up; they are not isolated crawler memory measurements or a guaranteed bound. Server throttling, response size, parsing cost and stdout speed can change real-site results.
 
 ## Limitations and next steps
 
 There is no JavaScript rendering, robots.txt implementation, per-host pacing, retry/backoff policy, authentication, persistent frontier or resume. These are explicit scope choices, not claims of a full production crawler. Robots policy and politeness would need agreement before broader operational use. A service accepting URLs from untrusted users would also need network access controls and isolation.
 
-For multiple domains, separate visit policies and scheduling budgets per host while retaining shared fetch logic. For a hosted API, add job identity, result storage, cancellation, access control and quotas. For restart recovery, persist scheduled/completed state and make reprocessing idempotent. More sophisticated encoding sniffing and resource-link extraction belong in the parser/decoding modules.
+For multiple domains, separate visit policies and scheduling budgets per host while retaining shared fetch logic. For a hosted API, add job identity, result storage, cancellation, access control and quotas. For restart recovery, persist scheduled/completed state and make reprocessing idempotent. Extraction of resource URLs beyond navigation hyperlinks would be an extension to the parser module.
 
 The solution targets **.NET 10 LTS**, whose [support lifecycle](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core) runs until 14 November 2028. This avoids starting a new project on .NET 9 shortly before its support ends on 10 November 2026. `global.json` accepts stable SDK updates within .NET 10 while preventing an automatic switch to a future major SDK. CI uses .NET 10 on both Windows and Linux; validation results identify which environments have actually been tested.
 
