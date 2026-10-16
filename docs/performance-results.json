@@ -1,0 +1,73 @@
+{
+  "Runtime": ".NET 10.0.13",
+  "OperatingSystem": "Microsoft Windows 10.0.26200",
+  "Pages": 41,
+  "SimulatedDelayMilliseconds": 25,
+  "Repetitions": 5,
+  "SequentialMedianMilliseconds": 1217.9942,
+  "ConcurrentMedianMilliseconds": 305.1677,
+  "Speedup": 3.991229084860554,
+  "Trials": [
+    {
+      "Concurrency": 1,
+      "ElapsedMilliseconds": 1217.7734,
+      "PeakServerRequests": 1,
+      "Pages": 41
+    },
+    {
+      "Concurrency": 4,
+      "ElapsedMilliseconds": 305.9101,
+      "PeakServerRequests": 4,
+      "Pages": 41
+    },
+    {
+      "Concurrency": 4,
+      "ElapsedMilliseconds": 303.7486,
+      "PeakServerRequests": 4,
+      "Pages": 41
+    },
+    {
+      "Concurrency": 1,
+      "ElapsedMilliseconds": 1215.1702,
+      "PeakServerRequests": 1,
+      "Pages": 41
+    },
+    {
+      "Concurrency": 1,
+      "ElapsedMilliseconds": 1219.6745,
+      "PeakServerRequests": 1,
+      "Pages": 41
+    },
+    {
+      "Concurrency": 4,
+      "ElapsedMilliseconds": 306.0573,
+      "PeakServerRequests": 4,
+      "Pages": 41
+    },
+    {
+      "Concurrency": 4,
+      "ElapsedMilliseconds": 305.1677,
+      "PeakServerRequests": 4,
+      "Pages": 41
+    },
+    {
+      "Concurrency": 1,
+      "ElapsedMilliseconds": 1218.6525,
+      "PeakServerRequests": 1,
+      "Pages": 41
+    },
+    {
+      "Concurrency": 1,
+      "ElapsedMilliseconds": 1217.9942,
+      "PeakServerRequests": 1,
+      "Pages": 41
+    },
+    {
+      "Concurrency": 4,
+      "ElapsedMilliseconds": 304.5426,
+      "PeakServerRequests": 4,
+      "Pages": 41
+    }
+  ],
+  "Scope": "Local synthetic I/O workload; not a real-site benchmark or a peak-memory measurement."
+}

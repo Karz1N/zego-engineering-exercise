@@ -1,0 +1,26 @@
+name: build-and-test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore Zego.Crawler.sln --locked-mode
+      - run: dotnet build Zego.Crawler.sln --configuration Release --no-restore
+      - run: dotnet test Zego.Crawler.sln --configuration Release --no-build --no-restore --logger trx
+      - run: dotnet format Zego.Crawler.sln --verify-no-changes --no-restore

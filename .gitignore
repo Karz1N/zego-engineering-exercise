@@ -1,0 +1,27 @@
+**/bin/
+**/obj/
+**/TestResults/
+.vs/
+.idea/
+*.user
+*.suo
+coverage/
+artifacts/
+.dotnet/
+.nuget/
+
+# Personal interview preparation and internal working notes
+/docs/analise-exercicio-zego.md
+/docs/preparacao-entrevista.md
+/docs/project-context.md
+/docs/revisao-arquitetura.md
+/docs/environment-notes.local.md
+
+# Superseded measurement; keep current .NET 10 results in version control
+/docs/performance-results-net9.json
+
+# Local IDE settings and operating-system metadata
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
